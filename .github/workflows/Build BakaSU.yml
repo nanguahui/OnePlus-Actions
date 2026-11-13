@@ -85,6 +85,15 @@ on:
           - '5.10'
         default: '6.1'
 
+      KPM:
+        description: "是否启用KPM"
+        required: true
+        type: choice
+        options:
+          - 'On'
+          - 'Off'
+        default: 'Off'
+
       SUSFS:
         description: "是否启用SUSFS"
         required: true
@@ -491,7 +500,18 @@ jobs:
                 fi
               fi
             fi
-            echo "✅ SUSFS patches applied"
+            # --- OKI tree: rejected include hunks leave susfs_def.h undeclared ---
+            if ! grep -q 'linux/susfs_def.h' fs/proc/task_mmu.c; then
+              echo "🔧 task_mmu.c: injecting susfs_def.h"
+              perl -0pi -e 's/(#include <linux\/pkeys\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/proc/task_mmu.c
+            fi
+            if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
+              echo "🔧 namespace.c: injecting susfs_def.h + extern block"
+              perl -0pi -e 's/(#include <linux\/mnt_idmapping\.h>)/$1\n#include <linux\/susfs_def.h>\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nextern bool susfs_is_current_ksu_domain(void);\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n#define CL_COPY_MNT_NS BIT(25)\n#endif/' fs/namespace.c
+            fi
+            echo "--- susfs include check ---"
+            grep -n 'susfs_def' fs/proc/task_mmu.c | head -2 || echo 'WARN task_mmu'
+            grep -n 'susfs_def' fs/namespace.c | head -2 || echo 'WARN namespace'            echo "✅ SUSFS patches applied"
           else
             echo "📦 使用Tracepoint Syscall Redirect Hook..."
           fi
@@ -560,6 +580,10 @@ jobs:
           echo "CONFIG_TMPFS_XATTR=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_TMPFS_POSIX_ACL=y" >> ./common/arch/arm64/configs/gki_defconfig
 
+          if [ "${{ github.event.inputs.KPM }}" == "On" ]; then
+            echo "📦 启用 KPM..."
+            echo "CONFIG_KPM=y" >> ./common/arch/arm64/configs/gki_defconfig
+          fi
           if [ "${{ github.event.inputs.bbg }}" == "On" ]; then
             echo "⚡ 配置 BBG 中..."
             echo 'CONFIG_BBG=y' >> ./common/arch/arm64/configs/gki_defconfig
@@ -717,6 +741,18 @@ jobs:
             cp "$image_path" kernel_workspace/kernel_platform/out/Final-Image-Find/Image
           fi
 
+      - name: "🧩 Patch Kernel Image (KPM) | KPM修补镜像"
+        if: ${{ github.event.inputs.KPM == 'On' }}
+        run: |
+          echo "🔧 正在应用KPM补丁..."
+          cd kernel_workspace/kernel_platform/out/Final-Image-Find
+          curl -LO https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/0.13.0/patch_linux
+          chmod +x patch_linux
+          ./patch_linux
+          rm -f Image
+          mv oImage Image
+          cp Image $GITHUB_WORKSPACE/AnyKernel3/Image
+          echo "✅ KPM补丁应用完成"
       - name: "🧠 Set Artifact Name | 设置产物名称"
         id: set_name
         run: |
