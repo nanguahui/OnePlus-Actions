@@ -493,11 +493,8 @@ jobs:
               perl -0pi -e 's/(#include <linux\/pkeys\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/proc/task_mmu.c
             fi
             if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
-              echo "🔧 namespace.c: injecting susfs_def.h include"
-              perl -0pi -e 's/(#include <linux\/mount\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/namespace.c
-              if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
-                perl -0pi -e 's/(#include <linux\/mount\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/namespace.c
-              fi
+              echo "🔧 namespace.c: injecting susfs_def.h + extern block"
+              perl -0pi -e 's/(#include <linux\/mnt_idmapping\.h>)/$1\n#include <linux\/susfs_def.h>\n#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\nextern bool susfs_is_current_ksu_domain(void);\nextern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n#define CL_COPY_MNT_NS BIT(25)\n#endif/' fs/namespace.c
             fi
             echo "--- susfs include check ---"; grep -n 'susfs_def' fs/proc/task_mmu.c | head -3 || echo 'WARN task_mmu'; grep -n 'susfs_def' fs/namespace.c | head -3 || echo 'WARN namespace'
             echo "✅ SUSFS patches applied"
