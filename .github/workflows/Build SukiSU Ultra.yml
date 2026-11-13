@@ -487,7 +487,18 @@ jobs:
                 fi
               fi
             fi
-            echo "✅ SUSFS patches applied"
+            # --- OKI tree: rejected include hunks leave susfs_def.h undeclared ---
+            if ! grep -q 'linux/susfs_def.h' fs/proc/task_mmu.c; then
+              echo "🔧 task_mmu.c: injecting susfs_def.h include"
+              sed -i '0,/#include <linux\/mm.h>/s//#include <linux\/mm.h>\n#include <linux\/susfs_def.h>/' fs/proc/task_mmu.c
+            fi
+            if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
+              echo "🔧 namespace.c: injecting susfs_def.h include"
+              sed -i '0,/#include <linux\/mnt_idmapping.h>/s//#include <linux\/mnt_idmapping.h>\n#include <linux\/susfs_def.h>/' fs/namespace.c
+              if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
+                sed -i '0,/#include <linux\/mount.h>/s//#include <linux\/mount.h>\n#include <linux\/susfs_def.h>/' fs/namespace.c
+              fi
+            fi            echo "✅ SUSFS patches applied"
           else
             echo "📦 应用MANUAL_HOOK补丁..."
             patch -p1 -F 3 < scope_min_manual_hooks_v1.6.patch
