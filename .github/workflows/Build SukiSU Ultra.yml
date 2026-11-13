@@ -498,7 +498,8 @@ jobs:
               if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
                 sed -i '0,/#include <linux\/mount.h>/s//#include <linux\/mount.h>\n#include <linux\/susfs_def.h>/' fs/namespace.c
               fi
-            fi            echo "✅ SUSFS patches applied"
+            fi
+            echo "✅ SUSFS patches applied"
           else
             echo "📦 应用MANUAL_HOOK补丁..."
             patch -p1 -F 3 < scope_min_manual_hooks_v1.6.patch
