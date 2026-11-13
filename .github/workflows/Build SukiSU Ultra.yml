@@ -314,7 +314,20 @@ jobs:
           rm -rf ./sukisu_setup.bin
           
           echo "✅ SukiSU Ultra配置完成"
-          
+
+      - name: "🩹 Fix KSU Preinit Symbols | 修补 preinit 符号"
+        run: |
+          cd kernel_workspace/kernel_platform/KernelSU/kernel
+
+          if [ -f ../../common/out/usr/include/linux/unistd.h ]; then
+            echo "✅ out/usr/include 存在，preinit 会正常编译，无需修补"
+          else
+            echo "⚠️ 未找到 common/out/usr/include/linux/unistd.h，preinit 被禁用"
+            echo "🔧 注入 preinit 符号 stub，避免 vmlinux 链接失败"
+            cat "$GITHUB_WORKSPACE/script/ksu_preinit_stub.c" >> ksu_main.c
+            echo "✅ 已追加 stub，ksu_main.c 行数: $(wc -l < ksu_main.c)"
+          fi
+
       - name: "🔧 Setup Patches | 配置补丁"
         run: |
           cd kernel_workspace
