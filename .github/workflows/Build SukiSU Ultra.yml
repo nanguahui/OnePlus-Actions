@@ -490,15 +490,16 @@ jobs:
             # --- OKI tree: rejected include hunks leave susfs_def.h undeclared ---
             if ! grep -q 'linux/susfs_def.h' fs/proc/task_mmu.c; then
               echo "🔧 task_mmu.c: injecting susfs_def.h include"
-              sed -i '0,/#include <linux\/mm.h>/s//#include <linux\/mm.h>\n#include <linux\/susfs_def.h>/' fs/proc/task_mmu.c
+              perl -0pi -e 's/(#include <linux\/mm\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/proc/task_mmu.c
             fi
             if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
               echo "🔧 namespace.c: injecting susfs_def.h include"
-              sed -i '0,/#include <linux\/mnt_idmapping.h>/s//#include <linux\/mnt_idmapping.h>\n#include <linux\/susfs_def.h>/' fs/namespace.c
+              perl -0pi -e 's/(#include <linux\/mnt_idmapping\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/namespace.c
               if ! grep -q 'linux/susfs_def.h' fs/namespace.c; then
-                sed -i '0,/#include <linux\/mount.h>/s//#include <linux\/mount.h>\n#include <linux\/susfs_def.h>/' fs/namespace.c
+                perl -0pi -e 's/(#include <linux\/mount\.h>)/$1\n#include <linux\/susfs_def.h>/ unless /susfs_def\.h/' fs/namespace.c
               fi
             fi
+            echo "--- task_mmu.c head ---"; sed -n '1,30p' fs/proc/task_mmu.c | grep -n 'susfs_def' || echo 'WARN: susfs_def.h NOT in task_mmu.c'
             echo "✅ SUSFS patches applied"
           else
             echo "📦 应用MANUAL_HOOK补丁..."
