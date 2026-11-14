@@ -567,6 +567,8 @@ jobs:
           cd kernel_workspace/kernel_platform
 
           echo "⚙️ 正在配置内核编译选项..."
+          echo "🔧 修正 SUBLEVEL 为 197 (匹配设备 5.15.197)"
+          sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 197/' ./common/Makefile
           
           echo "📦 启用 KSU 支持..."
           curl -L -o BakaSU_setup.bin https://github.com/Xiaomichael/OnePlus-Actions/raw/Build/script/bakasu_setup.bin
